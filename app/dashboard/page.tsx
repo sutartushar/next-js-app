@@ -79,10 +79,47 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('documents')
   const [isSearching, setIsSearching] = useState(false)
+  const [documents, setDocuments] = useState(mockDocuments)
+  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [uploadTitle, setUploadTitle] = useState('')
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
 
   const handleSearch = () => {
     setIsSearching(true)
     setTimeout(() => setIsSearching(false), 600)
+  }
+
+  const filteredDocuments = documents.filter((doc) =>
+    doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    doc.preview.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    doc.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+  )
+
+  const filteredSearchResults = mockSearchResults.filter((result) =>
+    result.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    result.snippet.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const handleUpload = () => {
+    if (!uploadTitle.trim()) return
+
+    setIsUploading(true)
+    setTimeout(() => {
+      const newDoc = {
+        id: String(documents.length + 1),
+        title: uploadTitle,
+        preview: 'Newly uploaded document. Analysis and insights will be generated automatically...',
+        tags: ['new', 'uploaded'],
+        relevance: 0.95,
+        date: new Date().toISOString().split('T')[0],
+      }
+      setDocuments([newDoc, ...documents])
+      setUploadTitle('')
+      setUploadFile(null)
+      setShowUploadModal(false)
+      setIsUploading(false)
+    }, 800)
   }
 
   return (
@@ -100,7 +137,7 @@ export default function Dashboard() {
                 <p className="text-xs text-muted-foreground">Document Intelligence Platform</p>
               </div>
             </div>
-            <Button className="bg-primary hover:bg-primary/90">
+            <Button className="bg-primary hover:bg-primary/90" onClick={() => setShowUploadModal(true)}>
               <Upload className="w-4 h-4 mr-2" />
               Upload Document
             </Button>
@@ -173,29 +210,36 @@ export default function Dashboard() {
               </Button>
             </div>
 
-            {mockDocuments.map((doc) => (
-              <Card key={doc.id} className="p-6 hover:border-primary/50 transition cursor-pointer group">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg group-hover:text-primary transition mb-2">{doc.title}</h3>
-                    <p className="text-sm text-muted-foreground mb-4">{doc.preview}</p>
-                    <div className="flex gap-2 flex-wrap">
-                      {doc.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary">
-                          <Tag className="w-3 h-3 mr-1" />
-                          {tag}
-                        </Badge>
-                      ))}
+            {filteredDocuments.length > 0 ? (
+              filteredDocuments.map((doc) => (
+                <Card key={doc.id} className="p-6 hover:border-primary/50 transition cursor-pointer group">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg group-hover:text-primary transition mb-2">{doc.title}</h3>
+                      <p className="text-sm text-muted-foreground mb-4">{doc.preview}</p>
+                      <div className="flex gap-2 flex-wrap">
+                        {doc.tags.map((tag) => (
+                          <Badge key={tag} variant="secondary">
+                            <Tag className="w-3 h-3 mr-1" />
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="text-right ml-4">
+                      <div className="text-2xl font-bold text-primary">{Math.round(doc.relevance * 100)}%</div>
+                      <p className="text-xs text-muted-foreground">Relevance</p>
+                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition mt-2" />
                     </div>
                   </div>
-                  <div className="text-right ml-4">
-                    <div className="text-2xl font-bold text-primary">{Math.round(doc.relevance * 100)}%</div>
-                    <p className="text-xs text-muted-foreground">Relevance</p>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition mt-2" />
-                  </div>
-                </div>
+                </Card>
+              ))
+            ) : (
+              <Card className="p-8 text-center">
+                <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                <p className="text-muted-foreground">No documents found matching your search.</p>
               </Card>
-            ))}
+            )}
           </div>
         )}
 
@@ -208,20 +252,27 @@ export default function Dashboard() {
               </p>
             </div>
 
-            {mockSearchResults.map((result) => (
-              <Card key={result.id} className="p-6 hover:border-primary/50 transition cursor-pointer group">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg group-hover:text-primary transition mb-2">{result.title}</h3>
-                    <p className="text-sm text-muted-foreground mb-4">{result.snippet}</p>
+            {filteredSearchResults.length > 0 ? (
+              filteredSearchResults.map((result) => (
+                <Card key={result.id} className="p-6 hover:border-primary/50 transition cursor-pointer group">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg group-hover:text-primary transition mb-2">{result.title}</h3>
+                      <p className="text-sm text-muted-foreground mb-4">{result.snippet}</p>
+                    </div>
+                    <div className="text-right ml-4 flex flex-col items-end">
+                      <div className="text-2xl font-bold text-accent">{Math.round(result.relevance * 100)}%</div>
+                      <p className="text-xs text-muted-foreground">Match</p>
+                    </div>
                   </div>
-                  <div className="text-right ml-4 flex flex-col items-end">
-                    <div className="text-2xl font-bold text-accent">{Math.round(result.relevance * 100)}%</div>
-                    <p className="text-xs text-muted-foreground">Match</p>
-                  </div>
-                </div>
+                </Card>
+              ))
+            ) : (
+              <Card className="p-8 text-center">
+                <Search className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                <p className="text-muted-foreground">No search results found. Try different keywords.</p>
               </Card>
-            ))}
+            )}
           </div>
         )}
 
@@ -277,6 +328,74 @@ export default function Dashboard() {
           </div>
         )}
       </main>
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md">
+            <div className="p-6 space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold mb-2">Upload Document</h2>
+                <p className="text-sm text-muted-foreground">Add a new document to your workspace</p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Document Title</label>
+                  <Input
+                    placeholder="Enter document title..."
+                    value={uploadTitle}
+                    onChange={(e) => setUploadTitle(e.target.value)}
+                    disabled={isUploading}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">File</label>
+                  <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition cursor-pointer">
+                    <input
+                      type="file"
+                      className="hidden"
+                      id="file-input"
+                      onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                      disabled={isUploading}
+                    />
+                    <label htmlFor="file-input" className="cursor-pointer">
+                      <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm font-medium">
+                        {uploadFile ? uploadFile.name : 'Drag and drop or click to select'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">PDF, DOCX, TXT supported</p>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setShowUploadModal(false)
+                    setUploadTitle('')
+                    setUploadFile(null)
+                  }}
+                  disabled={isUploading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-primary hover:bg-primary/90"
+                  onClick={handleUpload}
+                  disabled={isUploading || !uploadTitle.trim()}
+                >
+                  {isUploading ? 'Uploading...' : 'Upload'}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
